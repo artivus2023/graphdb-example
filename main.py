@@ -1,54 +1,41 @@
 from ctransformers import AutoModelForCausalLM
-import tqdm
-from collections import deque
+
+from agent.chat import respond_to, history
+from agent.summarize import summarize
+
+from utils.triplet_extractor import extract_triplets
 
 # Initialize the model
-llm = AutoModelForCausalLM.from_pretrained('models/nous-hermes-llama-2-7b.ggmlv3.q2_K.bin', model_type='llama', stream=True)
+llm = AutoModelForCausalLM.from_pretrained(
+    'models/nous-hermes-llama-2-7b.ggmlv3.q2_K.bin',
+    max_new_tokens=2048,
+    model_type='llama',
+    stream=True,
+    temperature=0.1,
+    stop=['\n', 'User: ', '### Example ']
+)
 
-# Initialize the conversation history
-history = deque(maxlen=10)
-
-MAX_TOKENS = 2048
-
-system_prompt = """Below is an instruction that describes a task. Write a response that appropriately completes the request.
-
-### Instruction: The following is a conversation between an AI and a human. The AI is going to say something to the human. Write what the AI is going to say
-in response to the human. The AI should respond in a way that is appropriate to the human's statement, and encourages the conversation
-to continue with follow up questions or statements
-
-### Response:{}
-
-AI: """
-
-def update_history(history, role, text):
-    # Add the new interaction to the history
-    history.append((role, text))
-    # Format the history into a string
-    history_str = "\n".join(f"{role}: {text}" for role, text in history)
-    return history, history_str
-
-def respond_to(input_text, history):
-    # Update the history with the user's input
-    history, history_str = update_history(history, "User", input_text)
-    # Update system prompt with the history and user's input
-    prompt = system_prompt.format(history_str)
-    # Initialize the response
-    response = ""
-    # Generate the AI's response
-    print("AI: ", end='', flush=True)  # Print the "AI: " prefix
-    for token in llm(prompt):
-        response += token
-        print(token, end='', flush=True)
-    print()  # print a newline at the end of the response
-    # Update the history with the AI's response
-    history, _ = update_history(history, "AI", response)
-    return history
-
-
+# Main REPL
 def main(history):
+    summary = ""
     while True:
         user_input = input("User: ")
-        history = respond_to(user_input, history)
+        # Extract graph from summary
+        # We need to use the tokenizer manually since we need special tokens.
+        extracted_triplets = extract_triplets(user_input)
+        # print(extracted_triplets)
+        for triplet in extracted_triplets:
+            print(triplet)
+        history = respond_to(user_input, history, llm)
+        summary = summarize(history, llm)
+        print(f"Summary: {summary}")
 
+test_text = """Intel Corporation is an American multinational corporation and technology company headquartered in Santa Clara, California. It is one of the world's largest semiconductor chip manufacturer by revenue, and is one of the developers of the x86 series of instruction sets found in most personal computers."""
 if __name__ == '__main__':
-    history = main(history)
+    main(history)
+    # extracted_text = triplet_extractor.tokenizer.batch_decode([triplet_extractor(
+    #     test_text, return_tensors=True, return_text=False)[0]["generated_token_ids"]]
+    #                                                           )
+    # extracted_triplets = extract_triplets(extracted_text[0])
+
+
