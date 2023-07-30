@@ -1,6 +1,7 @@
 from ctransformers import AutoModelForCausalLM
 
 from agent.chat import respond_to, history
+from agent.describe_world_state import describe_world_state
 from agent.summarize import summarize
 
 from utils.triplet_extractor import extract_triplets
@@ -16,13 +17,24 @@ llm = AutoModelForCausalLM.from_pretrained(
 )
 
 # Main REPL
+def store_word_state(extracted_triplets):
+
+    pass
+
+
 def main(history):
     summary = ""
     while True:
         user_input = input("User: ")
+
         # Extract graph from summary
+        # Get normalised description of input text
+        world_state_description = describe_world_state(user_input, llm)
+        prefix = "Speaker: User, Addressed to: AI, Content: "
+        print(f"World state description: {prefix + world_state_description}")
         # We need to use the tokenizer manually since we need special tokens.
-        extracted_triplets = extract_triplets(user_input)
+        extracted_triplets = extract_triplets(world_state_description)
+        store_word_state(extracted_triplets)
         # print(extracted_triplets)
         for triplet in extracted_triplets:
             print(triplet)

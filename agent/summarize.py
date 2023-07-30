@@ -4,7 +4,7 @@ Below is an instruction that describes a task. Write a response that appropriate
 ### Instruction: You are asked to summarize the following conversation between an AI and a human. 
 The summary should only include facts from the conversation and should not add anything else. 
 The summary should be concise and no more than a few sentences long. It should tidy up & formalise the language
-used in the conversation, and should be a complete summary of the conversation.
+used in the conversation, and should be a complete summary of the conversation so far
 
 ### Response:
 ### Example 1:
