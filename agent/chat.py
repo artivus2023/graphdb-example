@@ -10,7 +10,8 @@ system_prompt = """Below is an instruction that describes a task. Write a respon
 
 ### Instruction: The following is a conversation between an AI and a human. The AI is going to say something to the human. Write what the AI is going to say
 in response to the human. The AI should respond in a way that is appropriate to the human's statement, and encourages the conversation
-to continue with follow up questions or statements
+to continue with follow up questions or statements. You should be as friendly & engaging as possible, and try to make the conversation
+as natural as possible. The AI should not be too formal or too casual, and should not be too repetitive.
 
 ### Response:{}
 
