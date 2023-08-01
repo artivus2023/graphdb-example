@@ -1,4 +1,5 @@
 from transformers import pipeline
+import networkx as nx
 
 triplet_extractor = pipeline('text2text-generation', model='Babelscape/rebel-large', tokenizer='Babelscape/rebel-large')
 
@@ -37,3 +38,14 @@ def extract_triplets(text):
     if subject != '' and relation != '' and object_ != '':
         triplets.append({'head': subject.strip(), 'type': relation.strip(),'tail': object_.strip()})
     return triplets
+
+# Convert to NetworkX graph
+def triplets_to_networkx(triplets):
+    G = nx.MultiDiGraph()
+
+    for t in triplets:
+        G.add_node(t['head'])
+        G.add_node(t['tail'])
+        G.add_edge(t['head'], t['tail'], label=t['type'])
+
+    return G

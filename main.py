@@ -1,75 +1,79 @@
 from ctransformers import AutoModelForCausalLM
-
-from agent.chat import respond_to, history
+from agent.chat import respond_to
 from agent.describe_world_state import describe_world_state
 from agent.summarize import summarize
+from utils.enums import ConversationRole
 from utils.memgraph_to_networkx import memgraph_to_networkx
-from utils.store_world_state import store_world_state, get_node
-
-from utils.triplet_extractor import extract_triplets
-import matplotlib.pyplot as plt
+from types.world_state import store_world_state, get_node
+from utils.triplet_extractor import extract_triplets, triplets_to_networkx
+from agent.conversation_memory import ConversationMemory
 import networkx as nx
+# main.py
+from utils.graph import draw_graph
 
-# Initialize the model
-llm = AutoModelForCausalLM.from_pretrained(
-    'models/nous-hermes-llama-2-7b.ggmlv3.q2_K.bin',
-    max_new_tokens=2048,
-    model_type='llama',
-    stream=True,
-    temperature=0.1,
-    stop=['\n', 'User: ', '### Example ']
-)
+def initialize_model():
+    return AutoModelForCausalLM.from_pretrained(
+        'models/nous-hermes-llama-2-7b.ggmlv3.q2_K.bin',
+        max_new_tokens=2048,
+        model_type='llama',
+        stream=True,
+        temperature=0.1,
+        stop=['\n', 'User: ', '### Example ']
+    )
 
-# Main REPL
+def handle_user_input(user_input, history, llm, conversation_memory):
+    # Extract graph from user input
+    extracted_triplets = extract_triplets(user_input)
+    store_world_state(extracted_triplets)
+
+    # Update conversation history and construct summary
+    history = respond_to(user_input, history, llm)
+    
+    # Add user input to conversation graph
+    conversation_memory.add_message(ConversationRole.USER, user_input)
+    
+    return history, extracted_triplets
+
 def main(history):
-    summary = ""
+    llm = initialize_model()
+    conversation_memory = ConversationMemory(name="repl")
+    
+    # Load conversation history
+    messages = conversation_memory.conversation.get_messages()
+    history = [(message["m"].role, message["m"].content) for message in messages]
+
     while True:
         user_input = input("User: ")
-        # Get normalised description of input text, we could build a graph off this
-        # Get any knowledge from the user input
-        # We could do other stuff here too like turn it into a more formal description
-        # world_state_description = describe_world_state(user_input, llm)
-        # prefix = "Speaker: User, Addressed to: AI, Content: "
-        # print(f"World state description: {prefix + world_state_description}")
-        extracted_triplets = extract_triplets(user_input)
-        print("Got Triplets", extracted_triplets)
-        store_world_state(extracted_triplets)
-        # print(extracted_triplets)
-        for triplet in extracted_triplets:
-            print(triplet)
-        history = respond_to(user_input, history, llm)
+        history, extracted_triplets = handle_user_input(user_input, history, llm, conversation_memory)
+
+        # Add to conversation graph
         summary = summarize(history, llm)
-        # print(f"Summary: {summary}")
 
-        # Fetch the main entity from the database
-        entity = get_node(user_input.split()[0])  # Assuming the first word is the entity name
+        # Extract graph from summary
+        summary_triplets = extract_triplets(summary)
+        store_world_state(summary_triplets)
+        summary_graph = triplets_to_networkx(summary_triplets)
+
+        # Calculate betweenness centrality
+        centrality = nx.betweenness_centrality(summary_graph, endpoints=True)
+        # Find the node with the highest betweenness centrality
+        # This will be the most important thing in the conversation right now
+        # Could do a lot of other kinds of graph analysis here too for context
+        # like using graph neural networks to find missing or important context
+        # Other similar patterns of knowledge, whatevaaaaa
+        central_node = max(centrality, key=centrality.get)
+
+        # Fetch the central node for this interaction from the database
+        entity = get_node(central_node)
         if entity:
-            # Get all relations 2 deep
+            # Get all relations 2 deep for some context (again, lotta wats to walk through
+            # it's neighbours and look for relevant stuff for whatever purpose)
             nodes_list = entity.get_relations()
-            # for node in nodes_list:
-            #     print(node)
-            print(nodes_list)
             graph = memgraph_to_networkx(nodes_list)
-            print(graph.nodes(data=True))
             draw_graph(graph)
+        # Let's draw the conversation graph too
 
-def draw_graph(G):
-    # Create a new directed graph
-    D = nx.DiGraph()
-
-    # Add nodes and edges with labels to the new graph
-    for u, v, data in G.edges(data=True):
-        D.add_edge(u, v, label=data['label'])
-
-    pos = nx.shell_layout(D)
-    nx.draw(D, pos, with_labels=True)
-    edge_labels = nx.get_edge_attributes(D, 'label')
-    nx.draw_networkx_edge_labels(D, pos, edge_labels=edge_labels)
-    plt.show()
-
-if __name__ == '__main__':
-    # Start by giving the agent some context, ie your name
+if __name__ == "__main__":
+    from collections import deque
+    history = deque(maxlen=10)
     main(history)
-
-
-
