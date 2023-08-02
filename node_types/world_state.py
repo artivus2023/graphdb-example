@@ -59,8 +59,6 @@ class WorldState(Node):
         return results
 
 
-
-
 db = Memgraph()
 
 class Relation(Relationship, type="RELATION"):
@@ -77,6 +75,7 @@ def store_world_state(triplets):
     # Store the triplets in the graph
     for triplet in triplets:
         # Check if WorldState already exists
+        # TODO: Add an upsert operation to Node class
         try:
             subject = WorldState(name=triplet['head']).load(db=db)
         except:

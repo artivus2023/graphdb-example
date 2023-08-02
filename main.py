@@ -3,6 +3,7 @@ from agent.chat import respond_to
 from agent.describe_world_state import describe_world_state
 from agent.summarize import summarize
 from node_types.world_state import get_node, store_world_state
+from utils.embeddings import compare_embeddings, create_embedding
 from utils.enums import ConversationRole
 from utils.memgraph_to_networkx import memgraph_to_networkx
 # from types.world_state import store_world_state, get_node
@@ -42,27 +43,40 @@ def main(history):
     # Load conversation history
     messages = conversation_memory.conversation.get_messages()
     history = [(message["m"].role, message["m"].content) for message in messages]
+    print("Loaded conversation history", history)
 
     while True:
         user_input = input("User: ")
+        # TODO run categorisation on input first - we shouldn't try to parse
+        # triplets out of greetings, requests etc
         history, extracted_triplets = handle_user_input(user_input, history, llm, conversation_memory)
-
-        # Add to conversation graph
+        print("Extracted Triplets", extracted_triplets)
+        
+        # If we categorised this message as containing a world state update,
+        # store it. 
+        store_world_state(extracted_triplets)
+        
+        # Note we could do a summarisation step here if it was long input
         summary = summarize(history, llm)
-
         # Extract graph from summary
         summary_triplets = extract_triplets(summary)
-        store_world_state(summary_triplets)
+        summary_embedding = create_embedding(summary)
+        # Let's then get the embedding of the summary too & fetch the most related
+        # messages. If you had thousands of conversation and messages, can
+        # bring in related stuff to context, usual vectordb shit
+        
+        
         summary_graph = triplets_to_networkx(summary_triplets)
 
         # Calculate betweenness centrality
         centrality = nx.betweenness_centrality(summary_graph, endpoints=True)
         # Find the node with the highest betweenness centrality
-        # This will be the most important thing in the conversation right now
+        # This will be the most important topic in the conversation right now
         # Could do a lot of other kinds of graph analysis here too for context
         # like using graph neural networks to find missing or important context
-        # Other similar patterns of knowledge, whatevaaaaa
+        # Other similar patterns of knowledge nodes, whatevaaaaa
         central_node = max(centrality, key=centrality.get)
+        print("Central Node", central_node)
 
         # Fetch the central node for this interaction from the database
         entity = get_node(central_node)
@@ -73,6 +87,10 @@ def main(history):
             graph = memgraph_to_networkx(nodes_list)
             draw_graph(graph)
         # Let's draw the conversation graph too
+        # Save the conversation to the database
+        conversation_memory.save_to_database()
+
+        
 
 if __name__ == "__main__":
     from collections import deque

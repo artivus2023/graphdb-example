@@ -97,6 +97,8 @@ class Conversation(Node):
             return results[0]["m"]
 
     def set_summary(self, summary: str = None):
+        # Note here - we can save embeddings for the summary
+        # So we can do a similarity search later if we wanted to
         if summary is None:
             summary = "This is a new conversation, the user hasn't spoken yet"
             embedding = None

@@ -1,7 +1,7 @@
 from node_types.conversation import Conversation, Summary, Message, HasSummary, HasMessage, HasReply
-from utils.enums import ConversationRole
+from utils.enums import ConversationRole, SimulacraNodeType
 from uuid import uuid4 as uuid
-from gqlalchemy import Memgraph
+from gqlalchemy import Memgraph, match
 
 db = Memgraph()
 
@@ -11,6 +11,7 @@ class ConversationMemory():
         self.conversation_summary = default_summary
         self.conversation = self.upsert_conversation()
 
+    # Create a converstation graph if one doesn't already exist
     def upsert_conversation(self):
         try:
             conversation = Conversation(name=self.conversation_name).load(db=db)
@@ -29,3 +30,19 @@ class ConversationMemory():
         # Add the message to the conversation
         message_node = self.conversation.add_message(role=role.value, message=message)
         return message_node
+    
+    
+# TODO: Do this properly with indexes etc
+def get_all_messages_all_conversations():
+    query = (
+        match()
+        .node(labels=SimulacraNodeType.Conversation, variable="m")
+        .return_("m")
+        .execute()
+    )
+    results = list(query)
+    if len(results) == 0:
+        return None
+    else:
+        return [result["m"]["message"] for result in results]
+        
