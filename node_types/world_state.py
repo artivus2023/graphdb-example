@@ -1,6 +1,6 @@
 from gqlalchemy import Memgraph, Node, Relationship, match
 from gqlalchemy import Node
-from types.conversation import Message
+from node_types.conversation import Message
 
 from utils.enums import MemoryRelations
 from typing import List, Optional
@@ -20,6 +20,18 @@ class WorldStateAction(Relationship, type=MemoryRelations.WorldStateAction):
 class WorldState(Node):
     id: Optional[str]
     name: Optional[str]
+    
+    def get_relations(self):
+        # Get relations here a few nodes. Note we could train a model to convert natural language
+        # to cypher queries here, let the agent models drive everything including storage
+        # and retrieval of data.
+        query_template = """
+        MATCH (n {{name: '{0}'}})-[r1*1..2]-(connectedNodes)-[r2*1..2]-(nextNodes)
+        RETURN n, r1, connectedNodes, r2, nextNodes
+        """
+        query = query_template.format(self.name)
+        result = db.execute_and_fetch(query)
+        return list(result)
 
     # TODO: Add Document Type
     def get_knowledge_sources(self) -> List[Message]:
@@ -31,7 +43,6 @@ class WorldState(Node):
             .return_("m")
             .execute()
         )
-        # Convert to list of Messages, removing them from the dict
         results = [Message(**result["m"]) for result in list(query)]
         return results
 
@@ -44,7 +55,6 @@ class WorldState(Node):
             .return_("m")
             .execute()
         )
-        # Convert to list of Messages, removing them from the dict
         results = [Message(**result["m"]) for result in list(query)]
         return results
 

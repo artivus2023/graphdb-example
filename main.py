@@ -2,9 +2,10 @@ from ctransformers import AutoModelForCausalLM
 from agent.chat import respond_to
 from agent.describe_world_state import describe_world_state
 from agent.summarize import summarize
+from node_types.world_state import get_node, store_world_state
 from utils.enums import ConversationRole
 from utils.memgraph_to_networkx import memgraph_to_networkx
-from types.world_state import store_world_state, get_node
+# from types.world_state import store_world_state, get_node
 from utils.triplet_extractor import extract_triplets, triplets_to_networkx
 from agent.conversation_memory import ConversationMemory
 import networkx as nx
@@ -30,7 +31,7 @@ def handle_user_input(user_input, history, llm, conversation_memory):
     history = respond_to(user_input, history, llm)
     
     # Add user input to conversation graph
-    conversation_memory.add_message(ConversationRole.USER, user_input)
+    conversation_memory.add_message(ConversationRole.User, user_input)
     
     return history, extracted_triplets
 

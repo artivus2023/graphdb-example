@@ -9,7 +9,7 @@ from typing import List, Optional
 from urllib.parse import unquote
 
 from gqlalchemy.query_builders.memgraph_query_builder import Order
-from types.messages import AIMessage, BaseMessage, FunctionMessage, SystemMessage, UserMessage
+from node_types.messages import AIMessage, BaseMessage, FunctionMessage, SystemMessage, UserMessage
 from utils.embeddings import create_embedding
 
 from utils.enums import ConversationRole, MemoryRelations, SimulacraNodeType
@@ -185,7 +185,7 @@ class Conversation(Node):
         message_node = Message(
             id=str(uuid()),
             timestamp=get_timestamp(),
-            role=role.value,
+            role=role,
             content=urllib.parse.quote(message),
             embedding=embedding
         ).save(db=db)

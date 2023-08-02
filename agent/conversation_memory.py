@@ -1,4 +1,4 @@
-from types.conversation import Conversation, Summary, Message, HasSummary, HasMessage, HasReply
+from node_types.conversation import Conversation, Summary, Message, HasSummary, HasMessage, HasReply
 from utils.enums import ConversationRole
 from uuid import uuid4 as uuid
 from gqlalchemy import Memgraph
@@ -27,5 +27,5 @@ class ConversationMemory():
 
     def add_message(self, role: ConversationRole, message: str):
         # Add the message to the conversation
-        message_node = self.conversation.add_message(role=role, message=message)
+        message_node = self.conversation.add_message(role=role.value, message=message)
         return message_node
