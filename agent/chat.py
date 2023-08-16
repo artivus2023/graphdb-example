@@ -1,3 +1,4 @@
+from urllib.parse import unquote
 import tqdm
 from collections import deque
 
@@ -13,7 +14,10 @@ in response to the human. The AI should respond in a way that is appropriate to 
 to continue with follow up questions or statements. You should be as friendly & engaging as possible, and try to make the conversation
 as natural as possible. The AI should not be too formal or too casual, and should not be too repetitive.
 
-### Response:{}
+### Conversation History:
+{}
+
+### Response:
 
 AI: """
 
@@ -22,10 +26,12 @@ AI: """
 def update_history(history, role, text):
     # Add the new interaction to the history
     history.append((role, text))
-    # Format the history into a string
-    history_str = "\n".join(f"{role}: {text}" for role, text in history)
+    # Format the history into a string, string needs to be url decoded
+    history_str = "\n".join(f"{role}: {unquote(text)}" for role, text in history)
+     
     return history, history_str
 
+# Respond and update conversation history
 def respond_to(input_text, history, llm):
     # Update the history with the user's input
     history, history_str = update_history(history, "User", input_text)
@@ -41,5 +47,5 @@ def respond_to(input_text, history, llm):
     print()  # print a newline at the end of the response
     # Update the history with the AI's response
     history, _ = update_history(history, "AI", response)
-    return history
+    return history, response
 

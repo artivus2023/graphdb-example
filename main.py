@@ -29,10 +29,11 @@ def handle_user_input(user_input, history, llm, conversation_memory):
     store_world_state(extracted_triplets)
 
     # Update conversation history and construct summary
-    history = respond_to(user_input, history, llm)
+    history, response = respond_to(user_input, history, llm)
     
     # Add user input to conversation graph
     conversation_memory.add_message(ConversationRole.User, user_input)
+    conversation_memory.add_message(ConversationRole.Assistant, response)
     
     return history, extracted_triplets
 
@@ -61,20 +62,18 @@ def main(history):
         # Extract graph from summary
         summary_triplets = extract_triplets(summary)
         summary_embedding = create_embedding(summary)
-        # Let's then get the embedding of the summary too & fetch the most related
+        # We can then get the embedding of the summary too & fetch the most related
         # messages. If you had thousands of conversation and messages, can
         # bring in related stuff to context, usual vectordb shit
         
-        
         summary_graph = triplets_to_networkx(summary_triplets)
-
-        # Calculate betweenness centrality
-        centrality = nx.betweenness_centrality(summary_graph, endpoints=True)
         # Find the node with the highest betweenness centrality
         # This will be the most important topic in the conversation right now
         # Could do a lot of other kinds of graph analysis here too for context
         # like using graph neural networks to find missing or important context
-        # Other similar patterns of knowledge nodes, whatevaaaaa
+        
+        # Other similar patterns for knowledge nodes, whatevaaaaa
+        centrality = nx.betweenness_centrality(summary_graph, endpoints=True)
         central_node = max(centrality, key=centrality.get)
         print("Central Node", central_node)
 
@@ -86,9 +85,6 @@ def main(history):
             nodes_list = entity.get_relations()
             graph = memgraph_to_networkx(nodes_list)
             draw_graph(graph)
-        # Let's draw the conversation graph too
-        # Save the conversation to the database
-        conversation_memory.save_to_database()
 
         
 
